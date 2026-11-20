@@ -57,9 +57,9 @@ class FrontController extends Controller
 
     public function checkout() {
         $clientKey = config('midtrans.client_key');
-        // FIX #3: Kirim nomor WA admin ke view dari env
-        $adminWa = env('ADMIN_WA_NUMBER', '6281234567890');
-        return view('checkout', compact('clientKey', 'adminWa'));
+        $adminWa   = config('midtrans.admin_wa_number', '6287731932494');
+        $snapUrl   = config('midtrans.snap_url');
+        return view('checkout', compact('clientKey', 'adminWa', 'snapUrl'));
     }
 
     public function processCheckout(Request $request) {
@@ -109,7 +109,7 @@ class FrontController extends Controller
 
             // Check: kapasitas penuh
             $existingPortions = \App\Models\OrderItem::join('orders', 'order_items.order_id', '=', 'orders.id')
-                ->whereIn('orders.status', ['pending', 'paid', 'completed'])
+                ->whereIn('orders.status', ['pending', 'paid', 'cooking', 'shipping', 'completed'])
                 ->whereDate('orders.event_date', $eventDateOnly)
                 ->sum('order_items.qty');
                 
@@ -245,5 +245,57 @@ class FrontController extends Controller
         $order->save();
 
         return response()->json(['status' => 'OK']);
+    }
+
+    /**
+     * Halaman Publik: Lacak Progres & Tahapan Pesanan (Milestone Tracking)
+     */
+    public function tracking(Request $request)
+    {
+        $search = trim($request->input('search') ?? $request->input('q') ?? '');
+        $order = null;
+        $orderList = collect();
+        $searched = false;
+
+        if (!empty($search)) {
+            $searched = true;
+
+            // Bersihkan format (hilangkan # jika ada)
+            $cleanInput = ltrim($search, '#');
+
+            // Cek jika murni angka pendek (kemungkinan Order ID)
+            if (is_numeric($cleanInput) && (int) $cleanInput > 0 && strlen($cleanInput) <= 6) {
+                $order = Order::with('items.menu')->find((int) $cleanInput);
+            }
+
+            // Jika belum ketemu atau input mirip nomor WhatsApp
+            if (!$order) {
+                $digits = preg_replace('/\D/', '', $cleanInput);
+                $queryDigits = $digits;
+                if (str_starts_with($queryDigits, '62')) {
+                    $queryDigits = '0' . substr($queryDigits, 2);
+                } elseif (str_starts_with($queryDigits, '0')) {
+                    $queryDigits = substr($queryDigits, 1);
+                }
+
+                $orderList = Order::with('items.menu')
+                    ->where(function ($q) use ($cleanInput, $queryDigits, $digits) {
+                        $q->where('customer_wa', 'LIKE', "%{$cleanInput}%")
+                          ->orWhere('customer_wa', 'LIKE', "%{$queryDigits}%")
+                          ->orWhere('customer_wa', 'LIKE', "%{$digits}%");
+                    })
+                    ->orderBy('created_at', 'desc')
+                    ->take(10)
+                    ->get();
+
+                if ($orderList->count() === 1) {
+                    $order = $orderList->first();
+                }
+            }
+        }
+
+        $adminWa = config('midtrans.admin_wa_number', '6281234567890');
+
+        return view('tracking', compact('order', 'orderList', 'search', 'searched', 'adminWa'));
     }
 }

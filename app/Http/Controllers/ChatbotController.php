@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Menu;
+use App\Models\CateringPackage;
+use App\Services\PackageOptimizerService;
 use Illuminate\Http\Request;
 
 class ChatbotController extends Controller
@@ -25,6 +27,12 @@ class ChatbotController extends Controller
         switch ($intent) {
             case 'greeting':
                 return response()->json(['reply' => $this->handleGreeting()]);
+
+            case 'tracking':
+                return response()->json(['reply' => $this->handleTracking($message)]);
+
+            case 'package':
+                return response()->json(['reply' => $this->handlePackageRecommendation($message)]);
 
             case 'menu_list':
                 return response()->json(['reply' => $this->handleMenuList()]);
@@ -68,6 +76,7 @@ class ChatbotController extends Controller
     {
         $intents = [
             'greeting'      => ['halo', 'hai', 'hi', 'hello', 'hey', 'selamat pagi', 'selamat siang', 'selamat sore', 'selamat malam', 'pagi', 'siang', 'sore', 'malam', 'assalamualaikum', 'permisi'],
+            'package'       => ['paket', 'rekomendasi paket', 'paket menu', 'paket katering', 'paket box', 'paket hemat', 'paket favorit', 'paket murah', 'kombinasi paket', 'combo', 'nasi kotak paket', 'paket nasi'],
             'thanks'        => ['terima kasih', 'makasih', 'thanks', 'thank you', 'thx', 'tq'],
             'goodbye'       => ['bye', 'dadah', 'sampai jumpa', 'selamat tinggal', 'dah'],
             'budget'        => ['budget', 'bujet', 'anggaran', 'harga di bawah', 'harga dibawah', 'murah', 'terjangkau', 'di bawah', 'dibawah', 'kurang dari', 'maksimal', 'max ', 'paling murah', 'termurah'],
@@ -79,6 +88,20 @@ class ChatbotController extends Controller
             'contact'       => ['kontak', 'contact', 'hubungi', 'whatsapp', 'wa', 'telepon', 'telpon', 'alamat', 'lokasi', 'dimana', 'di mana'],
             'hours'         => ['jam', 'buka', 'tutup', 'operasional', 'jadwal', 'waktu', 'kapan'],
         ];
+
+        $lower = strtolower($message);
+
+        // Cek jika pengguna ingin melacak pesanan
+        if (str_contains($lower, 'lacak') || str_contains($lower, 'tracking') || str_contains($lower, 'cek status') || str_contains($lower, 'status pesanan') || str_contains($lower, 'sampai mana') || str_contains($lower, 'pesanan saya') || str_contains($lower, 'cek pesanan') || str_contains($lower, 'posisi pesanan')) {
+            return 'tracking';
+        }
+
+        // Cek jika pesan berisi angka budget langsung (misal: "25000", "25k", "30rb", "paket 25k", "budget 30k")
+        if (str_contains($message, 'paket') || str_contains($message, 'budget') || str_contains($message, 'bujet') || is_numeric(trim($message)) || preg_match('/^\s*\d+\s*(?:k|rb|ribu)\s*$/i', $message)) {
+            if ($this->extractBudgetAmount($message) > 0 || str_contains($message, 'paket')) {
+                return 'package';
+            }
+        }
 
         foreach ($intents as $intent => $keywords) {
             foreach ($keywords as $keyword) {
@@ -95,6 +118,34 @@ class ChatbotController extends Controller
     // Intent Handlers
     // ============================================================
 
+    /**
+     * Ekstrak nominal anggaran cerdas dari pesan (misal: "25k", "25rb", "25 ribu", "25.000", "25000", "30")
+     */
+    private function extractBudgetAmount(string $message): int
+    {
+        $clean = strtolower(trim($message));
+
+        // Pola 1: format '25k', '25.5k', '25rb', '25 ribu'
+        if (preg_match('/(\d+(?:[.,]\d+)?)\s*(?:k|rb|ribu)\b/i', $clean, $m)) {
+            $num = (float) str_replace(',', '.', $m[1]);
+            return (int) round($num * 1000);
+        }
+
+        // Pola 2: format angka biasa
+        $withoutDot = str_replace(['.', ','], '', $clean);
+        preg_match_all('/\d+/', $withoutDot, $matches);
+        if (!empty($matches[0])) {
+            $maxVal = (int) max($matches[0]);
+            // Jika angkanya kecil (antara 15 dan 150), kemungkinan pembeli bermaksud ribuan (misal "paket 25", "budget 30")
+            if ($maxVal >= 15 && $maxVal <= 150) {
+                return $maxVal * 1000;
+            }
+            return $maxVal;
+        }
+
+        return 0;
+    }
+
     private function handleGreeting(): string
     {
         $hour = (int) date('H');
@@ -103,13 +154,100 @@ class ChatbotController extends Controller
         elseif ($hour < 18) $greeting = 'Selamat sore';
         else $greeting = 'Selamat malam';
 
-        return "$greeting! 👋\n\nSaya asisten virtual **Adelia Catering Jepara**. Ada yang bisa saya bantu?\n\n"
-            . "Berikut yang bisa saya bantu:\n"
-            . "🍽️ **Lihat menu** — ketik \"menu\"\n"
-            . "💰 **Cari sesuai budget** — ketik \"budget 25000\"\n"
-            . "🛒 **Cara pesan** — ketik \"cara pesan\"\n"
-            . "📞 **Kontak kami** — ketik \"kontak\"\n"
-            . "⏰ **Jam operasional** — ketik \"jam buka\"";
+        return "$greeting! 👋\n\nSaya asisten virtual **Adelia Catering Jepara**.\n"
+            . "Bingung memilih hidangan? Berikan budget Anda, dan saya carikan kombinasi 5 hidangan paling optimal dari rekam jejak penjualan 3 tahun! 🍱\n\n"
+            . "💡 **Contoh pertanyaan cepat:**\n"
+            . "• \"paket 25k\" atau \"paket 30.000\"\n"
+            . "• \"menu terlaris\"\n"
+            . "• \"cara pesan\" atau \"kontak\"\n\n"
+            . "Silakan ketik atau klik pilihan di bawah ya! 😊";
+    }
+
+    /**
+     * Rekomendasi Paket Menu Berdasarkan Anggaran / Budget Pelanggan
+     */
+    private function handlePackageRecommendation(string $message): string
+    {
+        $budget = $this->extractBudgetAmount($message);
+
+        // KASUS 1: Pelanggan menyertakan angka budget tertentu
+        if ($budget > 0) {
+            if ($budget < 18000) {
+                return "🍱 Untuk paket menu lengkap 5 hidangan (karbohidrat, lauk utama, pendamping, sayur, snack), anggaran minimal kami mulai dari **Rp 20.000 / porsi**.\n\n"
+                    . "👉 Cek [Katalog Menu Lengkap](/menu) untuk opsi satuan di bawah Rp " . number_format($budget, 0, ',', '.') . ", atau coba ketik **\"paket 25k\"**!";
+            }
+
+            // Jalankan optimizer Dynamic Programming (MCKP) secara real-time
+            try {
+                $optimizer = new PackageOptimizerService();
+                $optResult = $optimizer->optimize($budget);
+
+                if ($optResult['success'] && !empty($optResult['items'])) {
+                    $total = number_format($optResult['total_price'], 0, ',', '.');
+                    $saving = number_format($optResult['remaining_budget'], 0, ',', '.');
+                    $budgetFormatted = number_format($budget, 0, ',', '.');
+                    $items = $optResult['items'];
+
+                    $reply = "🍱 **Rekomendasi Paket Hemat (Budget ≤ Rp {$budgetFormatted}):**\n\n"
+                        . "Berdasarkan analisis empiris penjualan 3 tahun, berikut kombinasi 5 hidangan paling disukai pelanggan:\n\n"
+                        . "• 🍚 **Karbohidrat:** {$items['karbohidrat']['name']}\n"
+                        . "• 🍗 **Lauk Utama:** {$items['lauk_utama']['name']}\n"
+                        . "• 🍳 **Pendamping:** {$items['lauk_pendamping']['name']}\n"
+                        . "• 🥗 **Sayuran:** {$items['sayur']['name']}\n"
+                        . "• 🥐 **Snack:** {$items['snack']['name']}\n\n"
+                        . "💰 **Total Harga:** **Rp {$total} / porsi**\n"
+                        . "🏷️ **Efisiensi:** Hemat Rp {$saving} dari batas budget\n"
+                        . "⭐ **Skor Kepuasan Pelanggan:** {$optResult['average_popularity']}%\n\n"
+                        . "👉 [Lihat Visual Foto & Pesan Paket Ini](/packages)!";
+
+                    return $reply;
+                }
+            } catch (\Exception $e) {
+                // Lanjut ke fallback jika terjadi kendala service
+            }
+
+            // Fallback query ke paket database jika ada
+            $packages = CateringPackage::with('items.menu')->where('price', '<=', $budget)->orderBy('price', 'desc')->get();
+            if ($packages->isNotEmpty()) {
+                $pkg = $packages->first();
+                $price = number_format($pkg->price, 0, ',', '.');
+                $reply = "🍱 **Paket Rekomendasi Sesuai Budget (≤ Rp " . number_format($budget, 0, ',', '.') . "):**\n\n"
+                    . "⭐ **{$pkg->name}** — Rp {$price} / porsi\n"
+                    . "_{$pkg->description}_\n\n"
+                    . "**Isi Paket 5 Hidangan:**\n";
+                foreach ($pkg->items as $it) {
+                    $reply .= "• " . ($it->menu->name ?? 'Menu') . "\n";
+                }
+                $reply .= "\n👉 [Pesan Paket Ini di Website](/packages/{$pkg->slug})";
+                return $reply;
+            }
+        }
+
+        // KASUS 2: Pelanggan meminta rekomendasi paket umum tanpa menyebutkan angka budget
+        $packages = CateringPackage::with('items.menu')->where('is_recommended', true)->orderBy('price', 'asc')->get();
+
+        if ($packages->isEmpty()) {
+            return "Saat ini kami menyediakan layanan peracikan paket kustom otomatis. Kunjungi halaman [Paket Katering](/packages) untuk mengoptimasi menu sesuai budget Anda! 😊";
+        }
+
+        $reply = "🍱 **Pilihan Paket Katering Favorit (Berdasarkan Data 3 Tahun):**\n\n";
+        foreach ($packages as $pkg) {
+            $price = number_format($pkg->price, 0, ',', '.');
+            $reply .= "⭐ **{$pkg->name}** — **Rp {$price} / porsi**\n";
+            $itemNames = $pkg->items->map(fn($it) => $it->menu->name ?? '')->filter()->join(', ');
+            if ($itemNames) {
+                $reply .= "   _{$itemNames}_\n\n";
+            }
+        }
+
+        $reply .= "💡 **Ingin paket sesuai budget pas Anda?**\n"
+            . "Ketik nominalnya, misal:\n"
+            . "• \"paket 25k\"\n"
+            . "• \"paket 30.000\"\n"
+            . "• \"paket 38rb\"\n\n"
+            . "👉 [Buka Simulator Paket Katering](/packages) untuk mencoba slider budget interaktif!";
+
+        return $reply;
     }
 
     private function handleMenuList(): string
@@ -230,18 +368,18 @@ class ChatbotController extends Controller
 
     private function handleBudget(string $message): string
     {
-        // Ekstrak angka dari pesan
-        preg_match_all('/\d[\d.]*/', str_replace('.', '', $message), $matches);
-        $budget = 0;
-        if (!empty($matches[0])) {
-            $budget = (int) max($matches[0]);
+        $budget = $this->extractBudgetAmount($message);
+
+        // Jika budget di atas Rp 18.000, berikan rekomendasi paket 5 hidangan optimal
+        if ($budget >= 18000) {
+            return $this->handlePackageRecommendation($message);
         }
 
         if ($budget <= 0) {
-            return "💰 Berapa budget Anda? Ketik seperti:\n\n"
-                . "• \"budget 25000\" — menu di bawah Rp 25.000\n"
-                . "• \"budget 50000\" — menu di bawah Rp 50.000\n"
-                . "• \"paling murah\" — menu termurah";
+            return "💰 Berapa budget Anda? Ketik langsung seperti:\n\n"
+                . "• \"paket 25k\" — paket katering hemat Rp 25.000\n"
+                . "• \"paket 30rb\" — paket katering favorit Rp 30.000\n"
+                . "• \"budget 15000\" — menu satuan di bawah Rp 15.000";
         }
 
         $menus = Menu::where('price', '<=', $budget)->orderBy('price', 'desc')->get();
@@ -269,6 +407,7 @@ class ChatbotController extends Controller
         }
 
         $reply .= "\n\n✅ Total **{$menus->count()} menu** sesuai budget Anda!";
+        $reply .= "\n\n🍱 **Butuh paket lengkap 5 hidangan?**\nKetik **\"paket {$budget}\"** atau buka [Paket Katering](/packages) untuk melihat paket komplit sesuai budget ini!";
         return $reply;
     }
 
@@ -336,6 +475,73 @@ class ChatbotController extends Controller
     private function handleGoodbye(): string
     {
         return "Sampai jumpa! 👋 Terima kasih sudah menghubungi Adelia Catering. Semoga harimu menyenangkan! 🌟";
+    }
+
+    /**
+     * Handler: Pelacakan Progres Pesanan Pelanggan (Milestone Tracking)
+     */
+    private function handleTracking(string $message): string
+    {
+        // Cari kemungkinan nomor ID pesanan atau nomor WA di dalam pesan
+        preg_match_all('/\d+/', str_replace(['#', '-', ' '], '', $message), $matches);
+
+        $order = null;
+        if (!empty($matches[0])) {
+            try {
+                foreach ($matches[0] as $candidate) {
+                    // Jika angka pendek (1 s/d 6 digit), coba sebagai ID pesanan
+                    if (strlen($candidate) <= 6 && (int)$candidate > 0) {
+                        $order = \App\Models\Order::with('items')->find((int)$candidate);
+                        if ($order) break;
+                    }
+
+                    // Jika angka panjang (>= 8 digit), coba sebagai nomor WA
+                    if (strlen($candidate) >= 8) {
+                        $order = \App\Models\Order::with('items')
+                            ->where('customer_wa', 'LIKE', "%{$candidate}%")
+                            ->orderBy('created_at', 'desc')
+                            ->first();
+                        if ($order) break;
+                    }
+                }
+            } catch (\Throwable $e) {
+                // Fallback jika database belum aktif atau terjadi kendala socket
+                return "🚚 **Pelacakan Pesanan Adelia Catering**\n\n"
+                    . "Untuk melihat progres pesanan Anda secara lengkap, silakan buka langsung di:\n"
+                    . "👉 [Halaman Lacak Status Pesanan](/tracking?search=" . urlencode($message) . ")";
+            }
+        }
+
+        if ($order) {
+            $eventDate = \Carbon\Carbon::parse($order->event_date)->translatedFormat('d F Y, H:i');
+            $statusLabel = $order->status_label;
+            $statusDesc = $order->status_description;
+            $itemsCount = $order->items->sum('qty');
+            $totalFmt = number_format($order->total_amount, 0, ',', '.');
+
+            $reply = "📦 **Status Pesanan #ORD-" . str_pad($order->id, 5, '0', STR_PAD_LEFT) . "**\n\n"
+                . "👤 **Pelanggan:** {$order->customer_name}\n"
+                . "📍 **Tahap Terkini:** **{$statusLabel}**\n"
+                . "💬 *{$statusDesc}*\n\n";
+
+            if ($order->tracking_note) {
+                $reply .= "🚚 **Catatan Khusus Tim/Kurir:**\n"
+                    . "_{$order->tracking_note}_\n\n";
+            }
+
+            $reply .= "📅 **Jadwal Acara:** {$eventDate} WIB\n"
+                . "🍱 **Total Pesanan:** {$itemsCount} porsi (Rp {$totalFmt})\n"
+                . "📍 **Alamat:** {$order->address}\n\n"
+                . "👉 [Buka Linimasa Visual & Rincian Lengkap](/tracking?search={$order->id})";
+
+            return $reply;
+        }
+
+        return "🚚 **Layanan Pelacakan Pesanan Adelia Catering**\n\n"
+            . "Untuk mengecek progres pesanan Anda (apakah sudah dibayar, sedang dimasak di dapur, atau dalam pengiriman kurir):\n\n"
+            . "1. Ketik pesan dengan nomor pesanan, contoh: **\"lacak #15\"**\n"
+            . "2. Atau ketik dengan nomor WhatsApp Anda, contoh: **\"lacak 08123456789\"**\n\n"
+            . "👉 Anda juga bisa langsung membuka halaman [Lacak Pesanan Mandiri](/tracking)!";
     }
 
     private function handleDefault(): string

@@ -2,7 +2,7 @@
 
 @section('custom_scripts')
 <script type="text/javascript"
-    src="https://app.sandbox.midtrans.com/snap/snap.js"
+    src="{{ $snapUrl ?? 'https://app.sandbox.midtrans.com/snap/snap.js' }}"
     data-client-key="{{ $clientKey }}"></script>
 @endsection
 
@@ -576,11 +576,12 @@
 
                         saveCart([]);
                         window.open(`https://wa.me/{{ $adminWa }}?text=${waText}`, '_blank');
-                        window.location.href = '/';
+                        // Arahkan langsung ke halaman lacak pesanan
+                        window.location.href = '/tracking?search=' + result.order_id;
                     },
                     onPending: function(paymentResult) {
                         alert('Silakan selesaikan instruksi pembayaran Anda.');
-                        window.location.href = '/';
+                        window.location.href = '/tracking?search=' + result.order_id;
                     },
                     onError: function(paymentResult) {
                         alert('Pembayaran gagal, silakan coba lagi.');

@@ -34,8 +34,8 @@
                 placeholder="Misal: Nasi Kotak Ayam Bakar Taliwang">
         </div>
         
-        <!-- Row 2: Kategori & Harga -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <!-- Row 2: Kategori, Harga Jual, & HPP (Harga Pokok Produksi) -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
                 <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Golongan Kategori <span class="text-red-500">*</span></label>
                 <div class="relative">
@@ -54,9 +54,53 @@
                 <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Harga Jual (Net) <span class="text-red-500">*</span></label>
                 <div class="relative flex items-center">
                     <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none font-bold text-slate-400 text-xs sm:text-sm">Rp</span>
-                    <input type="number" name="price" required 
+                    <input type="number" name="price" id="inputPrice" required 
                         class="w-full pl-9 pr-4 py-3 border border-slate-200 bg-slate-550/30 rounded-xl focus:bg-white focus:border-orange-500 transition outline-none font-bold text-slate-800 text-xs sm:text-sm" 
                         placeholder="0">
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">HPP (Modal Produksi)</label>
+                <div class="relative flex items-center">
+                    <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none font-bold text-slate-400 text-xs sm:text-sm">Rp</span>
+                    <input type="number" name="hpp" id="inputHpp"
+                        class="w-full pl-9 pr-4 py-3 border border-slate-200 bg-slate-550/30 rounded-xl focus:bg-white focus:border-orange-500 transition outline-none font-bold text-slate-800 text-xs sm:text-sm" 
+                        placeholder="Otomatis ~68% jika kosong">
+                </div>
+                <p class="text-[10px] text-slate-400 mt-1">Bahan baku + kemasan + produksi (untuk nilai keuntungan SMCKP).</p>
+            </div>
+        </div>
+
+        <!-- Row 2.5: Komponen Paket & Kalori (Untuk Algoritma Optimasi) -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+                <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                    Elemen Komponen Paket <span class="text-xs text-orange-500 font-normal">(Optimizer)</span>
+                </label>
+                <div class="relative">
+                    <select name="component_type" 
+                        class="w-full border border-slate-200 bg-slate-550/30 p-3 rounded-xl focus:bg-white focus:border-orange-500 transition outline-none font-semibold text-slate-750 cursor-pointer appearance-none text-xs sm:text-sm">
+                        <option value="lauk_utama">🍗 Lauk Utama (Ayam, Daging, Ikan)</option>
+                        <option value="karbohidrat">🍚 Karbohidrat (Nasi Kuning, Nasi Putih, Liwet, Uduk)</option>
+                        <option value="lauk_pendamping">🍳 Lauk Pendamping (Sambal Goreng, Telur, Perkedel, Tempe)</option>
+                        <option value="sayur">🥗 Sayuran (Capcay, Tumis Buncis, Urap)</option>
+                        <option value="snack">🥐 Snack / Kue / Roti</option>
+                    </select>
+                    <div class="absolute inset-y-0 right-3.5 flex items-center pointer-events-none text-slate-400">
+                        <i class="fa-solid fa-chevron-down text-xs"></i>
+                    </div>
+                </div>
+                <p class="text-[10px] text-slate-400 mt-1">Kategori ini digunakan oleh Algoritma Dynamic Programming untuk menyusun paket 5 hidangan.</p>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Estimasi Kalori (kkal)</label>
+                <div class="relative flex items-center">
+                    <input type="number" name="calories" value="150"
+                        class="w-full px-4 py-3 border border-slate-200 bg-slate-550/30 rounded-xl focus:bg-white focus:border-orange-500 transition outline-none font-semibold text-slate-800 text-xs sm:text-sm" 
+                        placeholder="Misal: 250">
+                    <span class="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none font-semibold text-slate-400 text-xs sm:text-sm">kkal</span>
                 </div>
             </div>
         </div>

@@ -9,7 +9,7 @@
 </div>
 
 <!-- Stat Cards -->
-<div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
     <!-- Card 1 -->
     <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/60 flex items-center justify-between hover:shadow-md transition-shadow duration-200">
         <div class="min-w-0">
@@ -33,8 +33,22 @@
             <i class="fa-solid fa-clock-rotate-left text-lg"></i>
         </div>
     </div>
+
+    <!-- Card 3: Pengunjung & Device -->
+    <a href="/admin/visitors" class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/60 flex items-center justify-between hover:shadow-md hover:border-indigo-200 transition-all duration-200 group">
+        <div class="min-w-0">
+            <div class="text-slate-400 font-semibold text-[10px] sm:text-xs uppercase tracking-wider mb-1">Pengunjung Web</div>
+            <div class="text-2xl sm:text-3xl font-bold text-indigo-600 tracking-tight">{{ $visitorStats['total_visitors'] ?? 0 }}</div>
+            <span class="text-[10px] text-indigo-600 font-bold bg-indigo-50 border border-indigo-100/70 px-2 py-0.5 rounded mt-1.5 inline-block">
+                Hari ini: {{ $visitorStats['today_visitors'] ?? 0 }} &bull; HP {{ $visitorStats['mobile_pct'] ?? 0 }}%
+            </span>
+        </div>
+        <div class="w-12 h-12 rounded-xl bg-indigo-50 text-indigo-500 group-hover:bg-indigo-600 group-hover:text-white flex items-center justify-center shrink-0 transition-colors">
+            <i class="fa-solid fa-users-viewfinder text-lg"></i>
+        </div>
+    </a>
     
-    <!-- Card 3: Revenue -->
+    <!-- Card 4: Revenue -->
     <div class="bg-slate-900 text-white p-5 rounded-2xl shadow-sm border border-slate-800 flex items-center justify-between hover:shadow-md transition-shadow duration-200">
         <div class="min-w-0">
             <div class="text-slate-400 font-semibold text-[10px] sm:text-xs uppercase tracking-wider mb-1">Potensi Pendapatan</div>
@@ -45,6 +59,27 @@
             <i class="fa-solid fa-wallet text-lg"></i>
         </div>
     </div>
+</div>
+
+<!-- Banner Quick Budget Recommender (Alat Asisten Penjual) -->
+<div class="bg-gradient-to-r from-orange-500 to-amber-600 rounded-2xl p-5 sm:p-6 mb-6 text-white shadow-md flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+    <div class="flex items-center gap-4">
+        <div class="w-12 h-12 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center shrink-0 text-white text-xl">
+            <i class="fa-solid fa-calculator"></i>
+        </div>
+        <div>
+            <div class="flex items-center gap-2">
+                <span class="bg-white/20 text-white text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">Fitur Penjual</span>
+                <span class="text-xs text-orange-100 font-medium">Dynamic Programming &amp; Data 3 Tahun</span>
+            </div>
+            <h3 class="text-base sm:text-lg font-bold text-white mt-0.5">Asisten Rekomendasi Budget Cepat</h3>
+            <p class="text-xs text-orange-100 mt-0.5">Pelanggan tanya paket sesuai budget via WA/telepon? Cukup klik nominalnya, sistem langsung racik paket 5 hidangan lengkap siap kirim.</p>
+        </div>
+    </div>
+    <a href="/admin/recommender" class="bg-white hover:bg-orange-50 text-orange-600 font-bold px-5 py-2.5 rounded-xl shadow-sm transition-all text-xs sm:text-sm shrink-0 flex items-center gap-2 active:scale-95">
+        <span>Buka Asisten Budget</span>
+        <i class="fa-solid fa-arrow-right text-xs"></i>
+    </a>
 </div>
 
 <!-- Grafik Pemasukan -->

@@ -141,6 +141,21 @@
                 <i class="fa-solid fa-calendar-check w-5 text-center text-base shrink-0 mr-3 {{ request()->is('admin/booking*') ? 'text-orange-500' : 'text-slate-400' }}"></i>
                 <span class="sidebar-label-el sidebar-transition truncate">Kalender Booking</span>
             </a>
+
+            <a href="/admin/recommender" class="sidebar-nav-link flex items-center px-4 py-3 rounded-xl font-medium text-sm sidebar-transition {{ request()->is('admin/recommender*') ? 'bg-orange-50 text-orange-650 font-bold' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900' }}">
+                <i class="fa-solid fa-calculator w-5 text-center text-base shrink-0 mr-3 {{ request()->is('admin/recommender*') ? 'text-orange-500' : 'text-slate-400' }}"></i>
+                <span class="sidebar-label-el sidebar-transition truncate">Asisten Budget Paket</span>
+            </a>
+
+            <a href="/admin/historical-sales" class="sidebar-nav-link flex items-center px-4 py-3 rounded-xl font-medium text-sm sidebar-transition {{ request()->is('admin/historical-sales*') ? 'bg-orange-50 text-orange-650 font-bold' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900' }}">
+                <i class="fa-solid fa-file-csv w-5 text-center text-base shrink-0 mr-3 {{ request()->is('admin/historical-sales*') ? 'text-orange-500' : 'text-slate-400' }}"></i>
+                <span class="sidebar-label-el sidebar-transition truncate">Data Penjualan 3 Tahun</span>
+            </a>
+
+            <a href="/admin/visitors" class="sidebar-nav-link flex items-center px-4 py-3 rounded-xl font-medium text-sm sidebar-transition {{ request()->is('admin/visitors*') ? 'bg-orange-50 text-orange-650 font-bold' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900' }}">
+                <i class="fa-solid fa-users-viewfinder w-5 text-center text-base shrink-0 mr-3 {{ request()->is('admin/visitors*') ? 'text-orange-500' : 'text-slate-400' }}"></i>
+                <span class="sidebar-label-el sidebar-transition truncate">Pengunjung &amp; Device</span>
+            </a>
         </nav>
         
         <!-- Footer / Logout -->
